@@ -51,12 +51,12 @@ commands:
   report  Report the status of the load testing servers.
     """)
 
-    up_group = OptionGroup(parser, "up", 
+    up_group = OptionGroup(parser, "up",
         """In order to spin up new servers you will need to specify at least the -k command, which is the name of the EC2 keypair to use for creating and connecting to the new servers. The bees will expect to find a .pem file with this name in ~/.ssh/.""")
 
     # Required
     up_group.add_option('-k', '--key',  metavar="KEY",  nargs=1,
-                        action='store', dest='key', type='string', 
+                        action='store', dest='key', type='string',
                         help="The ssh key pair name to use to connect to the new servers.")
 
     up_group.add_option('-s', '--servers', metavar="SERVERS", nargs=1,
@@ -72,18 +72,21 @@ commands:
                         action='store', dest='instance', type='string', default='ami-ff17fb96',
                         help="The instance-id to use for each server from (default: ami-ff17fb96).")
     up_group.add_option('-l', '--login',  metavar="LOGIN",  nargs=1,
-                        action='store', dest='login', type='string', default='newsapps',
-                        help="The ssh username name to use to connect to the new servers (default: newsapps).")
+                        action='store', dest='login', type='string', default='ubuntu',
+                        help="The ssh username name to use to connect to the new servers (default: ubuntu).")
 
     parser.add_option_group(up_group)
 
-    attack_group = OptionGroup(parser, "attack", 
-            """Beginning an attack requires only that you specify the -u option with the URL you wish to target.""")
+    attack_group = OptionGroup(parser, "attack",
+            """Beginning an attack requires only that you specify the -h option with the host you wish to target, and the -p option for the port of the target.""")
 
     # Required
-    attack_group.add_option('-u', '--url', metavar="URL", nargs=1,
-                        action='store', dest='url', type='string',
-                        help="URL of the target to attack.")
+    attack_group.add_option('-o', '--host', metavar="HOST", nargs=1,
+                        action='store', dest='host', type='string',
+                        help="Host of the target to attack.")
+    attack_group.add_option('-p', '--port', metavar="PORT", nargs=1,
+                        action='store', dest='port', type='int',
+                        help="Port of the target to attack.")
 
     attack_group.add_option('-n', '--number', metavar="NUMBER", nargs=1,
                         action='store', dest='number', type='int', default=1000,
@@ -91,6 +94,17 @@ commands:
     attack_group.add_option('-c', '--concurrent', metavar="CONCURRENT", nargs=1,
                         action='store', dest='concurrent', type='int', default=100,
                         help="The number of concurrent connections to make to the target (default: 100).")
+    attack_group.add_option('-t', '--ramp_up_time', metavar="RAMP_UP_TIME", nargs=1,
+                        action='store', dest='ramp_up_time', type='int',
+                        help="The ramp up time in seconds")
+    attack_group.add_option('-d', '--duration', metavar="DURATION", nargs=1,
+                        action='store', dest='duration', type='int',
+                        help="Duration to run the tests for")
+    attack_group.add_option('-r', '--rate', metavar="RATE", nargs=1,
+                        action='store', dest='rate', type='int',
+                        help="The max rate per second of messages to be sent")
+    attack_group.add_option('--no_ssl', action='store_true', dest='no_ssl', default=True, help="Disable SSL")
+    attack_group.add_option('--debug', action='store_true', dest='debug_mode', default=False, help="Run in debug mode (locally)")
 
     parser.add_option_group(attack_group)
 
@@ -110,13 +124,12 @@ commands:
 
         bees.up(options.servers, options.group, options.zone, options.instance, options.login, options.key)
     elif command == 'attack':
-        if not options.url:
-            parser.error('To run an attack you need to specify a url with -u')
+        if not options.host:
+            parser.error('To run an attack you need to specify a host with -h')
+        if not options.port:
+            parser.error('To run an attack you need to specify a port with -p')
 
-        if NO_TRAILING_SLASH_REGEX.match(options.url):
-            parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
-
-        bees.attack(options.url, options.number, options.concurrent)
+        bees.attack(options.host, options.port, options.number, options.duration, options.concurrent, options.ramp_up_time, options.rate, options.no_ssl, options.debug_mode)
     elif command == 'down':
         bees.down()
     elif command == 'report':

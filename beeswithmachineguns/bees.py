@@ -31,6 +31,7 @@ import socket
 import sys
 import time
 import urllib2
+import subprocess
 
 import boto
 import paramiko
@@ -186,27 +187,63 @@ def _attack(params):
 
         print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
-        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(url)s' % params)
+        # stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(url)s' % params)
+        if params['debug_mode']:
+            command_params = ['node', '../websocket-test/load-test-client']
+        else:
+            command_params = ['node', '~/websocket-test/load-test-client']
+
+        command_params += ['--connections', '%(concurrent_requests)s' % params]
+        command_params += ['--host', '%(host)s' % params]
+        command_params += ['--port', '%(port)s' % params]
+        if params['duration']:
+            command_params += ['--duration', '%(duration)s' % params]
+        else:
+            command_params += ['--number', '%(num_requests)s' % params]
+        if params['rate']:
+            command_params += ['--rate', '%(rate)s' % params]
+        if params['ramp_up_time']:
+            command_params += ['--ramp_up_time', '%(ramp_up_time)s' % params]
+        if params['no_ssl']:
+            command_params.append('--no_ssl')
+
+        if params['i'] == 0:
+            print 'Running "%s" on bees' % (' '.join(command_params))
+
+        if params['debug_mode']:
+            # run command locally
+            ab_results = subprocess.Popen(command_params, stdout=subprocess.PIPE).communicate()[0]
+            print ab_results
+        else:
+            stdin, stdout, stderr = client.exec_command(' '.join(command_params))
+            ab_results = stdout.read()
 
         response = {}
 
-        ab_results = stdout.read()
-        ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
+        # ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
 
-        if not ms_per_request_search:
+        # requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
+        # fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
+        # ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
+        # complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
+
+        # response['ms_per_request'] = float(ms_per_request_search.group(1))
+        # response['requests_per_second'] = float(requests_per_second_search.group(1))
+        # response['fifty_percent'] = float(fifty_percent_search.group(1))
+        # response['ninety_percent'] = float(ninety_percent_search.group(1))
+        # response['complete_requests'] = float(complete_requests_search.group(1))
+
+        requests_per_second_last_minute = re.search('Average\ rate\ over\ last\ minute\ of\ ([0-9.]+)\ transactions\ per\ second', ab_results)
+        requests_per_second_average = re.search('Average\ rate\ of\ ([0-9.]+)\ transactions\ per\ second', ab_results)
+        request_count = re.search('([0-9.]+)\ connections\ opened', ab_results)
+
+        if not request_count:
             print 'Bee %i lost sight of the target (connection timed out).' % params['i']
             return None
 
-        requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
-        fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
-        ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
-        complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
-
-        response['ms_per_request'] = float(ms_per_request_search.group(1))
-        response['requests_per_second'] = float(requests_per_second_search.group(1))
-        response['fifty_percent'] = float(fifty_percent_search.group(1))
-        response['ninety_percent'] = float(ninety_percent_search.group(1))
-        response['complete_requests'] = float(complete_requests_search.group(1))
+        response['average_per_second'] = float(requests_per_second_average.group(1))
+        response['last_minute_per_second'] = float(requests_per_second_last_minute.group(1))
+        response['request_count'] = float(request_count.group(1))
 
         print 'Bee %i is out of ammo.' % params['i']
 
@@ -239,38 +276,22 @@ def _print_results(results):
         print '     No bees completed the mission. Apparently your bees are peace-loving hippies.'
         return
 
-    complete_results = [r['complete_requests'] for r in complete_bees]
+    complete_results = [r['request_count'] for r in complete_bees]
     total_complete_requests = sum(complete_results)
     print '     Complete requests:\t\t%i' % total_complete_requests
 
-    complete_results = [r['requests_per_second'] for r in complete_bees]
+    complete_results = [r['average_per_second'] for r in complete_bees]
     mean_requests = sum(complete_results)
-    print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
+    print '     Average requests per second:\t%f [#/sec]' % mean_requests
 
-    complete_results = [r['ms_per_request'] for r in complete_bees]
-    mean_response = sum(complete_results) / num_complete_bees
-    print '     Time per request:\t\t%f [ms] (mean)' % mean_response
+    complete_results = [r['last_minute_per_second'] for r in complete_bees]
+    mean_requests = sum(complete_results)
+    print '     Average requests in the last minute per second:\t%f [#/sec]' % mean_requests
 
-    complete_results = [r['fifty_percent'] for r in complete_bees]
-    mean_fifty = sum(complete_results) / num_complete_bees
-    print '     50%% response time:\t\t%f [ms] (mean)' % mean_fifty
+    print 'Mission Assessment: Swarm annihilated target.'
 
-    complete_results = [r['ninety_percent'] for r in complete_bees]
-    mean_ninety = sum(complete_results) / num_complete_bees
-    print '     90%% response time:\t\t%f [ms] (mean)' % mean_ninety
 
-    if mean_response < 500:
-        print 'Mission Assessment: Target crushed bee offensive.'
-    elif mean_response < 1000:
-        print 'Mission Assessment: Target successfully fended off the swarm.'
-    elif mean_response < 1500:
-        print 'Mission Assessment: Target wounded, but operational.'
-    elif mean_response < 2000:
-        print 'Mission Assessment: Target severely compromised.'
-    else:
-        print 'Mission Assessment: Swarm annihilated target.'
-    
-def attack(url, n, c):
+def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl, debug_mode):
     """
     Test the root url of this site.
     """
@@ -294,8 +315,8 @@ def attack(url, n, c):
         instances.extend(reservation.instances)
 
     instance_count = len(instances)
-    requests_per_instance = int(float(n) / instance_count)
-    connections_per_instance = int(float(c) / instance_count)
+    requests_per_instance = int(float(number) / instance_count)
+    connections_per_instance = int(float(concurrent) / instance_count)
 
     print 'Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance)
 
@@ -306,17 +327,23 @@ def attack(url, n, c):
             'i': i,
             'instance_id': instance.id,
             'instance_name': instance.public_dns_name,
-            'url': url,
+            'host': host,
+            'port': port,
             'concurrent_requests': connections_per_instance,
             'num_requests': requests_per_instance,
+            'ramp_up_time': ramp_up_time,
+            'rate': rate,
+            'duration': duration,
+            'no_ssl': no_ssl,
             'username': username,
             'key_name': key_name,
+            'debug_mode': debug_mode
         })
 
     print 'Stinging URL so it will be cached for the attack.'
 
     # Ping url so it will be cached for testing
-    urllib2.urlopen(url)
+    urllib2.urlopen('http://%s:%s/' % (host, port))
 
     print 'Organizing the swarm.'
 

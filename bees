@@ -2,5 +2,7 @@
 
 from beeswithmachineguns import main
 
+print "\n!!! Note: Running modified version of bees specifically for web socket testing client !!!\n"
+
 if __name__ == '__main__':
     main.main()
