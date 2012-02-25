@@ -103,7 +103,7 @@ commands:
     attack_group.add_option('-r', '--rate', metavar="RATE", nargs=1,
                         action='store', dest='rate', type='int',
                         help="The max rate per second of messages to be sent")
-    attack_group.add_option('--no_ssl', action='store_true', dest='no_ssl', default=True, help="Disable SSL")
+    attack_group.add_option('--no_ssl', action='store_true', dest='no_ssl', default=False, help="Disable SSL")
     attack_group.add_option('--debug', action='store_true', dest='debug_mode', default=False, help="Run in debug mode (locally)")
 
     parser.add_option_group(attack_group)
