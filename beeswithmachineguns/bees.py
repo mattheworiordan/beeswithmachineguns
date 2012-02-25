@@ -93,7 +93,7 @@ def up(count, group, zone, image_id, username, key_name):
 
     ec2_connection = boto.connect_ec2()
 
-    print 'Attempting to call up %i bees.' % count
+    print 'Attempting to call up %i bees with image %s' % (count, image_id)
 
     reservation = ec2_connection.run_instances(
         image_id=image_id,
@@ -191,7 +191,7 @@ def _attack(params):
         if params['debug_mode']:
             command_params = ['node', '../websocket-test/load-test-client']
         else:
-            command_params = ['node', '~/websocket-test/load-test-client']
+            command_params = ['node', 'load-test-client']
 
         command_params += ['--connections', '%(concurrent_requests)s' % params]
         command_params += ['--host', '%(host)s' % params]
@@ -215,7 +215,7 @@ def _attack(params):
             ab_results = subprocess.Popen(command_params, stdout=subprocess.PIPE).communicate()[0]
             print ab_results
         else:
-            stdin, stdout, stderr = client.exec_command(' '.join(command_params))
+            stdin, stdout, stderr = client.exec_command('cd ~/websocket-test && git pull origin && ' + ' '.join(command_params))
             ab_results = stdout.read()
 
         response = {}
@@ -236,6 +236,7 @@ def _attack(params):
         requests_per_second_last_minute = re.search('Average\ rate\ over\ last\ minute\ of\ ([0-9.]+)\ transactions\ per\ second', ab_results)
         requests_per_second_average = re.search('Average\ rate\ of\ ([0-9.]+)\ transactions\ per\ second', ab_results)
         request_count = re.search('([0-9.]+)\ connections\ opened', ab_results)
+        ips = re.search('IPs\ used\:\ (.+)', ab_results)
 
         if not request_count:
             print 'Bee %i lost sight of the target (connection timed out).' % params['i']
@@ -244,6 +245,7 @@ def _attack(params):
         response['average_per_second'] = float(requests_per_second_average.group(1))
         response['last_minute_per_second'] = float(requests_per_second_last_minute.group(1))
         response['request_count'] = float(request_count.group(1))
+        response['ips'] = ips.group(1).split(',')
 
         print 'Bee %i is out of ammo.' % params['i']
 
@@ -288,6 +290,12 @@ def _print_results(results):
     mean_requests = sum(complete_results)
     print '     Average requests in the last minute per second:\t%f [#/sec]' % mean_requests
 
+    complete_results = []
+    for r in complete_bees:
+        complete_results += r['ips']
+    mean_requests = uniq(complete_results)
+    print '     IPs used:\t%s' % (', '.join(mean_requests))
+
     print 'Mission Assessment: Swarm annihilated target.'
 
 
@@ -317,6 +325,7 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
     instance_count = len(instances)
     requests_per_instance = int(float(number) / instance_count)
     connections_per_instance = int(float(concurrent) / instance_count)
+    rate_per_instance = int(float(rate) / instance_count)
 
     print 'Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance)
 
@@ -332,7 +341,7 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
             'concurrent_requests': connections_per_instance,
             'num_requests': requests_per_instance,
             'ramp_up_time': ramp_up_time,
-            'rate': rate,
+            'rate': rate_per_instance,
             'duration': duration,
             'no_ssl': no_ssl,
             'username': username,
@@ -356,3 +365,9 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
     _print_results(results)
 
     print 'The swarm is awaiting new orders.'
+
+
+def uniq(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if x not in seen and not seen_add(x)]
