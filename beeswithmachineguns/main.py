@@ -69,10 +69,10 @@ commands:
                         action='store', dest='zone', type='string', default='us-east-1d',
                         help="The availability zone to start the instances in (default: us-east-1d).")
     up_group.add_option('-i', '--instance',  metavar="INSTANCE",  nargs=1,
-                        action='store', dest='instance', type='string', default='ami-ff17fb96',
-                        help="The instance-id to use for each server from (default: ami-ff17fb96).")
+                        action='store', dest='instance', type='string', default='ami-0cf72565',  # ami-ff17fb96
+                        help="The instance-id to use for each server from (default: ami-0cf72565).")
     up_group.add_option('-l', '--login',  metavar="LOGIN",  nargs=1,
-                        action='store', dest='login', type='string', default='ubuntu',
+                        action='store', dest='login', type='string', default='ubuntu', # newsapps
                         help="The ssh username name to use to connect to the new servers (default: ubuntu).")
 
     parser.add_option_group(up_group)
