@@ -354,7 +354,13 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
     print 'Stinging URL so it will be cached for the attack.'
 
     # Ping url so it will be cached for testing
-    urllib2.urlopen('http://%s:%s/' % (host, port))
+    if no_ssl:
+        ssl_suffix = ''
+    else:
+        ssl_suffix = 's'
+
+    print 'http%s://%s:%s/' % (ssl_suffix, host, port)
+    urllib2.urlopen('http%s://%s:%s/' % (ssl_suffix, host, port))
 
     print 'Organizing the swarm.'
 
