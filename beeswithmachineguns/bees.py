@@ -193,7 +193,7 @@ def _attack(params):
         else:
             command_params = ['node', 'load-test-client']
 
-        command_params += ['--connections', '%(concurrent_requests)s' % params]
+        command_params += ['--concurrent', '%(concurrent_requests)s' % params]
         command_params += ['--host', '%(host)s' % params]
         command_params += ['--port', '%(port)s' % params]
         if params['duration']:
@@ -253,6 +253,8 @@ def _attack(params):
 
         return response
     except socket.error, e:
+        print "Socket error"
+        print e
         return e
 
 
