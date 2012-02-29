@@ -360,8 +360,10 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
     else:
         ssl_suffix = 's'
 
-    print 'http%s://%s:%s/' % (ssl_suffix, host, port)
-    urllib2.urlopen('http%s://%s:%s/' % (ssl_suffix, host, port))
+    hosts_array = host.split(',')
+    for i, host in enumerate(hosts_array):
+        print 'Host: %s - http%s://%s:%s/' % (i, ssl_suffix, host, port)
+        urllib2.urlopen('http%s://%s:%s/' % (ssl_suffix, host, port))
 
     print 'Organizing the swarm.'
 
