@@ -190,7 +190,7 @@ def _attack(params):
             'concurrent': params['concurrent_requests'],
             'number': params['num_requests'],
             'ramp_up_time': params['ramp_up_time'] if params['ramp_up_time'] else '',
-            'no_ssl': 'true' if params['no_ssl'] else 'false',
+            'no_ssl': 'true' if params['no_ssl'] else '',
             'rate': params['rate'] if params['rate'] else '',
             'duration': params['duration'] if params['duration'] else ''
             })
