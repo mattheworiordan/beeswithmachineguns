@@ -69,8 +69,8 @@ commands:
                         action='store', dest='zone', type='string', default='us-east-1d',
                         help="The availability zone to start the instances in (default: us-east-1d).")
     up_group.add_option('-i', '--instance',  metavar="INSTANCE",  nargs=1,
-                        action='store', dest='instance', type='string', default='ami-0cf72565',  # ami-ff17fb96
-                        help="The instance-id to use for each server from (default: ami-0cf72565).")
+                        action='store', dest='instance', type='string', default='ami-aa8f53c3',  # ami-ff17fb96
+                        help="The instance-id to use for each server from (default: ami-aa8f53c3).")
     up_group.add_option('-l', '--login',  metavar="LOGIN",  nargs=1,
                         action='store', dest='login', type='string', default='ubuntu', # newsapps
                         help="The ssh username name to use to connect to the new servers (default: ubuntu).")
@@ -119,8 +119,8 @@ commands:
         if not options.key:
             parser.error('To spin up new instances you need to specify a key-pair name with -k')
 
-        if options.group == 'default':
-            print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
+        # if options.group == 'default':
+        #     print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
 
         bees.up(options.servers, options.group, options.zone, options.instance, options.login, options.key)
     elif command == 'attack':

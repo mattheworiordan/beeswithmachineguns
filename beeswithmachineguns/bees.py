@@ -35,9 +35,14 @@ import subprocess
 
 import boto
 import paramiko
+import httplib, urllib
+import time
+
+from debug_instance import DebugInstance
 
 EC2_INSTANCE_TYPE = 't1.micro'
 STATE_FILENAME = os.path.expanduser('~/.bees')
+MAX_HTTP_ERRORS = 10
 
 # Utilities
 
@@ -179,65 +184,67 @@ def _attack(params):
     print 'Bee %i is joining the swarm.' % params['i']
 
     try:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(
-            params['instance_name'],
-            username=params['username'],
-            key_filename=_get_pem_path(params['key_name']))
+        querystring_params = urllib.urlencode({
+            'host': params['host'],
+            'port': params['port'],
+            'concurrent': params['concurrent_requests'],
+            'number': params['num_requests'],
+            'ramp_up_time': params['ramp_up_time'] if params['ramp_up_time'] else '',
+            'no_ssl': 'true' if params['no_ssl'] else 'false',
+            'rate': params['rate'] if params['rate'] else '',
+            'duration': params['duration'] if params['duration'] else ''
+            })
+        headers = {"Accept": "text/plain"}
+        if params['debug_mode']:
+            port = 8001
+        else:
+            port = 8000
+
+        if params['i'] == 0:
+            print 'Using params "%s" on bees' % (querystring_params)
+
+        conn = httplib.HTTPConnection('%s:%s' % (params['instance_name'], port))
+        conn.request("GET", "/start?" + querystring_params, None, headers)
+        response = conn.getresponse()
+        response_data = response.read()
+
+        if response_data == 'Load test already running':
+            print 'Bee %i is already running a load test' % params['i']
+            return None
+        if response_data != 'Started load test':
+            print 'Bee %i appears to be offline and has not started the load test' % params['i']
+            return None
 
         print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
-        # stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(url)s' % params)
-        if params['debug_mode']:
-            command_params = ['node', '../websocket-test/load-test-client']
-        else:
-            command_params = ['node', 'load-test-client']
-
-        command_params += ['--concurrent', '%(concurrent_requests)s' % params]
-        command_params += ['--host', '%(host)s' % params]
-        command_params += ['--port', '%(port)s' % params]
-        if params['duration']:
-            command_params += ['--duration', '%(duration)s' % params]
-        else:
-            command_params += ['--number', '%(num_requests)s' % params]
-        if params['rate']:
-            command_params += ['--rate', '%(rate)s' % params]
-        if params['ramp_up_time']:
-            command_params += ['--ramp_up_time', '%(ramp_up_time)s' % params]
-        if params['no_ssl']:
-            command_params.append('--no_ssl')
-
-        if params['i'] == 0:
-            print 'Running "%s" on bees' % (' '.join(command_params))
-
-        if params['debug_mode']:
-            # run command locally
-            ab_results = subprocess.Popen(command_params, stdout=subprocess.PIPE).communicate()[0]
-            print ab_results
-        else:
-            stdin, stdout, stderr = client.exec_command('cd ~/websocket-test && git pull origin && ' + ' '.join(command_params))
-            ab_results = stdout.read()
+        http_errors = 0
+        while http_errors < MAX_HTTP_ERRORS:
+            try:
+                conn = httplib.HTTPConnection('%s:%s' % (params['instance_name'], port))
+                conn.request("GET", "/report", None, headers)
+                response = conn.getresponse()
+                response_data = response.read()
+                if re.search('Report not ready yet', response_data):
+                    time.sleep(3)
+                elif re.search('connections opened over', response_data):
+                    break
+                else:
+                    print 'Bee %i is not responding to report requests and is probably offline' % params['i']
+                    print 'Response: %s' % response_data
+                    return None
+            except:
+                http_errors += 1
+                if http_errors == MAX_HTTP_ERRORS:
+                    print 'Bee %i is unresponsive and has suffered %i http errors' % (params['i'], MAX_HTTP_ERRORS)
+                    return None
+                time.sleep(1)
 
         response = {}
 
-        # ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
-
-        # requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
-        # fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
-        # ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
-        # complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
-
-        # response['ms_per_request'] = float(ms_per_request_search.group(1))
-        # response['requests_per_second'] = float(requests_per_second_search.group(1))
-        # response['fifty_percent'] = float(fifty_percent_search.group(1))
-        # response['ninety_percent'] = float(ninety_percent_search.group(1))
-        # response['complete_requests'] = float(complete_requests_search.group(1))
-
-        requests_per_second_last_minute = re.search('Average\ rate\ over\ last\ minute\ of\ ([0-9.]+)\ transactions\ per\ second', ab_results)
-        requests_per_second_average = re.search('Average\ rate\ of\ ([0-9.]+)\ transactions\ per\ second', ab_results)
-        request_count = re.search('([0-9.]+)\ connections\ opened', ab_results)
-        ips = re.search('IPs\ used\:\ (.+)', ab_results)
+        requests_per_second_last_minute = re.search('Average\ rate\ over\ last\ minute\ of\ ([0-9.]+)\ transactions\ per\ second', response_data)
+        requests_per_second_average = re.search('Average\ rate\ of\ ([0-9.]+)\ transactions\ per\ second', response_data)
+        request_count = re.search('([0-9.]+)\ connections\ opened', response_data)
+        ips = re.search('IPs\ used\:\ (.+)', response_data)
 
         if not request_count:
             print 'Bee %i lost sight of the target (connection timed out).' % params['i']
@@ -249,8 +256,6 @@ def _attack(params):
         response['ips'] = ips.group(1).split(',')
 
         print 'Bee %i is out of ammo.' % params['i']
-
-        client.close()
 
         return response
     except socket.error, e:
@@ -306,29 +311,39 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
     """
     Test the root url of this site.
     """
-    username, key_name, instance_ids = _read_server_list()
+
+    if debug_mode:
+        username, key_name, instance_ids = 'ubuntu', 'aws', True
+        print 'Running in debug mode, executing locally for one instance on port 8001'
+    else:
+        username, key_name, instance_ids = _read_server_list()
 
     if not instance_ids:
         print 'No bees are ready to attack.'
         return
 
-    print 'Connecting to the hive.'
+    if debug_mode:
+        instances = [DebugInstance('1', 'localhost')]
+    else:
+        print 'Connecting to the hive.'
 
-    ec2_connection = boto.connect_ec2()
+        ec2_connection = boto.connect_ec2()
+        print 'Assembling bees.'
 
-    print 'Assembling bees.'
+        reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
 
-    reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
+        instances = []
 
-    instances = []
-
-    for reservation in reservations:
-        instances.extend(reservation.instances)
+        for reservation in reservations:
+            instances.extend(reservation.instances)
 
     instance_count = len(instances)
     requests_per_instance = int(float(number) / instance_count)
     connections_per_instance = int(float(concurrent) / instance_count)
-    rate_per_instance = int(float(rate) / instance_count)
+    if rate:
+        rate_per_instance = int(float(rate) / instance_count)
+    else:
+        rate_per_instance = False
 
     print 'Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance)
 
