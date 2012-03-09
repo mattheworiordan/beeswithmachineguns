@@ -200,22 +200,29 @@ def _attack(params):
         else:
             port = 8000
 
+        attack_url = "/start?%s" % querystring_params
+
         if params['i'] == 0:
-            print 'Using params "%s" on bees' % (querystring_params)
+            print 'Attack URL: %s' % attack_url
 
         conn = httplib.HTTPConnection('%s:%s' % (params['instance_name'], port))
-        conn.request("GET", "/start?" + querystring_params, None, headers)
+        conn.request("GET", attack_url, None, headers)
         response = conn.getresponse()
         response_data = response.read()
 
-        if response_data == 'Load test already running':
+        if re.search('Load test ([0-9.]+) already running', response_data):
             print 'Bee %i is already running a load test' % params['i']
             return None
-        if response_data != 'Started load test':
-            print 'Bee %i appears to be offline and has not started the load test' % params['i']
-            return None
 
-        print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
+        load_test_id = re.search('Started load test number ([0-9.]+)', response_data)
+        if not load_test_id:
+            print 'Bee %i appears to be offline and has not started the load test' % params['i']
+            print 'Response: %s' % response_data
+            return None
+        else:
+            load_test_id = int(load_test_id.group(1))
+
+        print 'Bee %i is firing his machine gun (load test #%i, host: %s). Bang bang!' % (params['i'], load_test_id, params['instance_name'])
 
         http_errors = 0
         while http_errors < MAX_HTTP_ERRORS:
@@ -224,13 +231,13 @@ def _attack(params):
                 conn.request("GET", "/report", None, headers)
                 response = conn.getresponse()
                 response_data = response.read()
-                if re.search('Report not ready yet', response_data):
+                if re.search('Report for load test %i not ready yet' % load_test_id, response_data):
                     time.sleep(3)
-                elif re.search('connections opened over', response_data):
+                elif re.search('Report for load test %i complete' % load_test_id, response_data):
                     break
                 else:
-                    print 'Bee %i is not responding to report requests and is probably offline' % params['i']
-                    print 'Response: %s' % response_data
+                    print 'Bee %i is not responding to report requests correctly' % params['i']
+                    print 'Response for load test %i: %s' % (load_test_id, response_data)
                     return None
             except:
                 http_errors += 1
@@ -248,6 +255,7 @@ def _attack(params):
 
         if not request_count:
             print 'Bee %i lost sight of the target (connection timed out).' % params['i']
+            print 'Response was: %s' % response_data
             return None
 
         response['average_per_second'] = float(requests_per_second_average.group(1))
@@ -377,7 +385,7 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
 
     hosts_array = host.split(',')
     for i, host in enumerate(hosts_array):
-        print 'Host: %s - http%s://%s:%s/' % (i, ssl_suffix, host, port)
+        print '   sting url %i: http%s://%s:%s/' % (i, ssl_suffix, host, port)
         urllib2.urlopen('http%s://%s:%s/' % (ssl_suffix, host, port))
 
     print 'Organizing the swarm.'
