@@ -251,6 +251,8 @@ def _attack(params):
         requests_per_second_last_minute = re.search('Average\ rate\ over\ last\ minute\ of\ ([0-9.]+)\ transactions\ per\ second', response_data)
         requests_per_second_average = re.search('Average\ rate\ of\ ([0-9.]+)\ transactions\ per\ second', response_data)
         request_count = re.search('([0-9.]+)\ connections\ opened', response_data)
+        error_count = re.search('Load test errors ([0-9.]+)', response_data)
+        error_rate_per_minute = re.search('errors per minute ([0-9.]+)', response_data)
         ips = re.search('IPs\ used\:\ (.+)', response_data)
 
         if not request_count:
@@ -261,6 +263,8 @@ def _attack(params):
         response['average_per_second'] = float(requests_per_second_average.group(1))
         response['last_minute_per_second'] = float(requests_per_second_last_minute.group(1))
         response['request_count'] = float(request_count.group(1))
+        response['error_count'] = float(error_count.group(1))
+        response['error_rate_per_minute'] = float(error_rate_per_minute.group(1))
         response['ips'] = ips.group(1).split(',')
 
         print 'Bee %i is out of ammo.' % params['i']
@@ -305,6 +309,14 @@ def _print_results(results):
     complete_results = [r['last_minute_per_second'] for r in complete_bees]
     mean_requests = sum(complete_results)
     print '     Average requests in the last minute per second:\t%f [#/sec]' % mean_requests
+
+    complete_results = [r['error_count'] for r in complete_bees]
+    mean_requests = sum(complete_results)
+    print '     Total errors encountered by bees:\t%f [#/sec]' % mean_requests
+
+    complete_results = [r['error_rate_per_minute'] for r in complete_bees]
+    mean_requests = sum(complete_results)
+    print '     Average errors per minute by bees:\t%f [#/sec]' % mean_requests
 
     complete_results = []
     for r in complete_bees:
