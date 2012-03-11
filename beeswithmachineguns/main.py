@@ -31,6 +31,8 @@ from optparse import OptionParser, OptionGroup
 
 NO_TRAILING_SLASH_REGEX = re.compile(r'^.*?\.\w+$')
 
+EC2_INSTANCE_TYPE = 't1.micro'
+
 def parse_options():
     """
     Handle the command line arguments for spinning up bees
@@ -74,6 +76,9 @@ commands:
     up_group.add_option('-l', '--login',  metavar="LOGIN",  nargs=1,
                         action='store', dest='login', type='string', default='ubuntu', # newsapps
                         help="The ssh username name to use to connect to the new servers (default: ubuntu).")
+    up_group.add_option('-y', '--instance_type',  metavar="INSTANCE_TYPE",  nargs=1,
+                        action='store', dest='instance_type', type='string', default=EC2_INSTANCE_TYPE,
+                        help="EC2 instance type to use for bees (default: t1.micro)")
 
     parser.add_option_group(up_group)
 
@@ -119,10 +124,7 @@ commands:
         if not options.key:
             parser.error('To spin up new instances you need to specify a key-pair name with -k')
 
-        # if options.group == 'default':
-        #     print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
-
-        bees.up(options.servers, options.group, options.zone, options.instance, options.login, options.key)
+        bees.up(options.servers, options.group, options.zone, options.instance, options.login, options.key, options.instance_type)
     elif command == 'attack':
         if not options.host:
             parser.error('To run an attack you need to specify a host with -h')

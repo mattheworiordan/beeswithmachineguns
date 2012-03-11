@@ -40,7 +40,6 @@ import time
 
 from debug_instance import DebugInstance
 
-EC2_INSTANCE_TYPE = 't1.micro'
 STATE_FILENAME = os.path.expanduser('~/.bees')
 MAX_HTTP_ERRORS = 10
 
@@ -76,7 +75,7 @@ def _get_pem_path(key):
 
 # Methods
 
-def up(count, group, zone, image_id, username, key_name):
+def up(count, group, zone, image_id, username, key_name, instance_type):
     """
     Startup the load testing server.
     """
@@ -106,7 +105,7 @@ def up(count, group, zone, image_id, username, key_name):
         max_count=count,
         key_name=key_name,
         security_groups=[group],
-        instance_type=EC2_INSTANCE_TYPE,
+        instance_type=instance_type,
         placement=zone)
 
     print 'Waiting for bees to load their machine guns...'
