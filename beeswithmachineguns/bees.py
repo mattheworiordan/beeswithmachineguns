@@ -270,7 +270,7 @@ def _attack(params):
 
         return response
     except socket.error, e:
-        print "Socket error"
+        print "Socket error for host %s" % params['host']
         print e
         return e
 
