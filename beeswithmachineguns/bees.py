@@ -334,10 +334,12 @@ def _print_results(results):
             if seconds in complete_results:
                 complete_results[seconds][0] += int(row[1])
                 complete_results[seconds][1] += int(row[2])
-                complete_results[seconds][2] += int(row[3])
+                if row[3] != 'max':
+                    complete_results[seconds][2] += int(row[3])
                 complete_results[seconds][3] += int(row[4])
             else:
-                complete_results[seconds] = [int(row[1]), int(row[2]), int(row[3]), int(row[4])]
+                messages_attempted = row[3] if row[3] == 'max' else int(row[3])
+                complete_results[seconds] = [int(row[1]), int(row[2]), messages_attempted, int(row[4])]
     print '\nCollective bee performance report:\nSeconds passed,Connections attempted,Actual connections,Messages attempted,Actual Messages'
     for i in sorted(complete_results.keys()):
         row = complete_results[i]
