@@ -253,6 +253,8 @@ def _attack(params):
         error_count = re.search('Load test errors ([0-9.]+)', response_data)
         error_rate_per_minute = re.search('errors per minute ([0-9.]+)', response_data)
         ips = re.search('IPs\ used\:\ (.+)', response_data)
+        re_matcher = re.compile('Seconds passed.*Actual Messages\n(.*)\n\-\-\-', re.MULTILINE|re.DOTALL)
+        report = re_matcher.search(response_data)
 
         if not request_count:
             print 'Bee %i lost sight of the target (connection timed out).' % params['i']
@@ -265,6 +267,7 @@ def _attack(params):
         response['error_count'] = float(error_count.group(1))
         response['error_rate_per_minute'] = float(error_rate_per_minute.group(1))
         response['ips'] = ips.group(1).split(',')
+        response['report'] = report.group(1).split('\n')
 
         print 'Bee %i is out of ammo.' % params['i']
 
@@ -323,7 +326,24 @@ def _print_results(results):
     mean_requests = uniq(complete_results)
     print '     IPs used:\t%s' % (', '.join(mean_requests))
 
-    print 'Mission Assessment: Swarm annihilated target.'
+    complete_results = {}
+    for r in complete_bees:
+        for row in r['report']:
+            row = row.split(',')
+            seconds = int(row[0])
+            if seconds in complete_results:
+                complete_results[seconds][0] += int(row[1])
+                complete_results[seconds][1] += int(row[2])
+                complete_results[seconds][2] += int(row[3])
+                complete_results[seconds][3] += int(row[4])
+            else:
+                complete_results[seconds] = [int(row[1]), int(row[2]), int(row[3]), int(row[4])]
+    print '\nCollective bee performance report:\nSeconds passed,Connections attempted,Actual connections,Messages attempted,Actual Messages'
+    for i in sorted(complete_results.keys()):
+        row = complete_results[i]
+        print '%s,%s' % (i, ','.join(str(i) for i in row))
+
+    print '\nMission Assessment: Swarm annihilated target.'
 
 
 def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl, debug_mode):
