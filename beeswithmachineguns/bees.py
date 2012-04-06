@@ -186,7 +186,7 @@ def _attack(params):
         querystring_params = urllib.urlencode({
             'host': params['host'],
             'port': params['port'],
-            'concurrent': params['concurrent_requests'],
+            'concurrent': params['concurrent_requests'] if params['concurrent_requests'] else '',
             'number': params['num_requests'],
             'ramp_up_time': params['ramp_up_time'] if params['ramp_up_time'] else '',
             'no_ssl': 'true' if params['no_ssl'] else '',
@@ -380,13 +380,24 @@ def attack(host, port, number, duration, concurrent, ramp_up_time, rate, no_ssl,
 
     instance_count = len(instances)
     requests_per_instance = int(float(number) / instance_count)
-    connections_per_instance = int(float(concurrent) / instance_count)
+
+    if duration:
+        action_description = 'rounds for %ss' % duration
+    else:
+        action_description = '%s rounds' % requests_per_instance
+
+    if concurrent:
+        connections_description = connections_per_instance = int(float(concurrent) / instance_count)
+    else:
+        connections_per_instance = None
+        connections_description = 'unlimited'
+
     if rate:
         rate_per_instance = int(float(rate) / instance_count)
     else:
         rate_per_instance = False
 
-    print 'Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance)
+    print 'Each of %i bees will fire %s, using %s concurrent connections.' % (instance_count, action_description, connections_description)
 
     params = []
 

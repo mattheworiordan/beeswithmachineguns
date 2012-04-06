@@ -97,8 +97,8 @@ commands:
                         action='store', dest='number', type='int', default=1000,
                         help="The number of total connections to make to the target (default: 1000).")
     attack_group.add_option('-c', '--concurrent', metavar="CONCURRENT", nargs=1,
-                        action='store', dest='concurrent', type='int', default=100,
-                        help="The number of concurrent connections to make to the target (default: 100).")
+                        action='store', dest='concurrent', type='int',
+                        help="The number of concurrent connections to make to the target, if blank, uses new connection for each request")
     attack_group.add_option('-t', '--ramp_up_time', metavar="RAMP_UP_TIME", nargs=1,
                         action='store', dest='ramp_up_time', type='int',
                         help="The ramp up time in seconds")
