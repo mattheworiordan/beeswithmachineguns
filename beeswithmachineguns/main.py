@@ -108,6 +108,9 @@ commands:
     attack_group.add_option('-r', '--rate', metavar="RATE", nargs=1,
                         action='store', dest='rate', type='int',
                         help="The max rate per second of messages to be sent")
+    attack_group.add_option('-u', '--timeout', metavar="TIMEOUT", nargs=1,
+                        action='store', dest='timeout', type='int',
+                        help="Amount of time in seconds before a connection attempt times out")
     attack_group.add_option('--no_ssl', action='store_true', dest='no_ssl', default=False, help="Disable SSL")
     attack_group.add_option('--debug', action='store_true', dest='debug_mode', default=False, help="Run in debug mode (locally)")
 
@@ -131,7 +134,7 @@ commands:
         if not options.port:
             parser.error('To run an attack you need to specify a port with -p')
 
-        bees.attack(options.host, options.port, options.number, options.duration, options.concurrent, options.ramp_up_time, options.rate, options.no_ssl, options.debug_mode)
+        bees.attack(options.host, options.port, options.number, options.duration, options.concurrent, options.ramp_up_time, options.rate, options.no_ssl, options.timeout, options.debug_mode)
     elif command == 'down':
         bees.down()
     elif command == 'report':
