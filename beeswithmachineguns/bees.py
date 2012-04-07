@@ -324,7 +324,7 @@ def _print_results(results):
     for r in complete_bees:
         complete_results += r['ips']
     mean_requests = uniq(complete_results)
-    print '     IPs used:\t%s' % (', '.join(mean_requests))
+    print '     IPs used (brackets indicate old entries no longer active):\n     %s' % (', '.join(mean_requests))
 
     complete_results = {}
     for r in complete_bees:
