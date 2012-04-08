@@ -74,7 +74,7 @@ commands:
                         action='store', dest='instance', type='string', default='ami-38f92651',  # ami-ff17fb96
                         help="The instance-id to use for each server from (default: ami-38f92651).")
     up_group.add_option('-l', '--login',  metavar="LOGIN",  nargs=1,
-                        action='store', dest='login', type='string', default='ubuntu', # newsapps
+                        action='store', dest='login', type='string', default='ubuntu',  # newsapps
                         help="The ssh username name to use to connect to the new servers (default: ubuntu).")
     up_group.add_option('-y', '--instance_type',  metavar="INSTANCE_TYPE",  nargs=1,
                         action='store', dest='instance_type', type='string', default=EC2_INSTANCE_TYPE,
@@ -95,10 +95,10 @@ commands:
 
     attack_group.add_option('-n', '--number', metavar="NUMBER", nargs=1,
                         action='store', dest='number', type='int', default=1000,
-                        help="The number of total connections to make to the target (default: 1000).")
+                        help="The number of total request to make to the target, which is ignored if duration is specified (default: 1000)")
     attack_group.add_option('-c', '--concurrent', metavar="CONCURRENT", nargs=1,
-                        action='store', dest='concurrent', type='int',
-                        help="The number of concurrent connections to make to the target, if blank, uses new connection for each request")
+                        action='store', dest='concurrent', type='int', default=1000,
+                        help="The max number of concurrent connections that can be used before misfires start occurring (default: 1000)")
     attack_group.add_option('-t', '--ramp_up_time', metavar="RAMP_UP_TIME", nargs=1,
                         action='store', dest='ramp_up_time', type='int',
                         help="The ramp up time in seconds")

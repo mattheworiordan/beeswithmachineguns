@@ -253,7 +253,7 @@ def _attack(params):
         error_count = re.search('Load test errors ([0-9.]+)', response_data)
         error_rate_per_minute = re.search('errors per minute ([0-9.]+)', response_data)
         ips = re.search('IPs\ used\:\ (.+)', response_data)
-        re_matcher = re.compile('Seconds passed.*Actual Messages\n(.*)\n\-\-\-', re.MULTILINE|re.DOTALL)
+        re_matcher = re.compile('Seconds passed.*Latency\(ms\)\n(.*)\n\-\-\-', re.MULTILINE|re.DOTALL)
         report = re_matcher.search(response_data)
 
         if not request_count:
@@ -337,10 +337,13 @@ def _print_results(results):
                 if row[3] != 'max':
                     complete_results[seconds][2] += int(row[3])
                 complete_results[seconds][3] += int(row[4])
+                complete_results[seconds][3] += int(row[5])
+                complete_results[seconds][3] += int(row[6])
+                complete_results[seconds][3] += int(row[7])
             else:
                 messages_attempted = row[3] if row[3] == 'max' else int(row[3])
-                complete_results[seconds] = [int(row[1]), int(row[2]), messages_attempted, int(row[4])]
-    print '\nCollective bee performance report:\nSeconds passed,Connections attempted,Actual connections,Messages attempted,Actual Messages'
+                complete_results[seconds] = [int(row[1]), int(row[2]), messages_attempted, int(row[4]), int(row[5]), int(row[6]), int(row[7])]
+    print '\nCollective bee performance report:\nSeconds passed,Connections attempted,Actual connections,Messages attempted p/s,Actual Messages p/s,Connection Errors p/s,Misfires p/s,Average latency(ms)'
     for i in sorted(complete_results.keys()):
         row = complete_results[i]
         print '%s,%s' % (i, ','.join(str(i) for i in row))
