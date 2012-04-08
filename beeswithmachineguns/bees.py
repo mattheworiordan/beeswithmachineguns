@@ -337,15 +337,16 @@ def _print_results(results):
                 if row[3] != 'max':
                     complete_results[seconds][2] += int(row[3])
                 complete_results[seconds][3] += int(row[4])
-                complete_results[seconds][3] += int(row[5])
-                complete_results[seconds][3] += int(row[6])
-                complete_results[seconds][3] += int(row[7])
+                complete_results[seconds][4] += int(row[5])
+                complete_results[seconds][5] += int(row[6])
+                complete_results[seconds][6] += int(row[7])
             else:
                 messages_attempted = row[3] if row[3] == 'max' else int(row[3])
                 complete_results[seconds] = [int(row[1]), int(row[2]), messages_attempted, int(row[4]), int(row[5]), int(row[6]), int(row[7])]
     print '\nCollective bee performance report:\nSeconds passed,Connections attempted,Actual connections,Messages attempted p/s,Actual Messages p/s,Connection Errors p/s,Misfires p/s,Average latency(ms)'
     for i in sorted(complete_results.keys()):
         row = complete_results[i]
+        row[6] = row[6] / len(complete_bees)
         print '%s,%s' % (i, ','.join(str(i) for i in row))
 
     print '\nMission Assessment: Swarm annihilated target.'
