@@ -273,7 +273,7 @@ def _attack(params):
 
         return response
     except socket.error, e:
-        print "Socket error for host %s" % params['host']
+        print "Socket error for host %s" % params['instance_name']
         print e
         return e
 
